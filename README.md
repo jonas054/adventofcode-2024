@@ -8,7 +8,7 @@ Here's my attempt.
 - Day 1: ✅ ✅ GNUMake
 - Day 2: ✅ ✅ Lua
 - Day 3: ✅ ✅ Awk
-- Day 4: Haskell
+- Day 4: ✅ ✅ Haskell
 - Day 5: Bash
 - Day 6: Rust
 - Day 7: Pascal
