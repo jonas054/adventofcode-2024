@@ -9,7 +9,7 @@ Here's my attempt.
 - Day 2: ✅ ✅ Lua
 - Day 3: ✅ ✅ Awk
 - Day 4: ✅ ✅ Haskell
-- Day 5: Bash
+- Day 5: ✅ Bash
 - Day 6: Rust
 - Day 7: Pascal
 - Day 8: Erlang
