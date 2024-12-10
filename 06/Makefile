@@ -1,5 +1,5 @@
-all: part1
-	./part1
+all: part1 part2
+	./part2
 
-part1: part1.rs
+part%: part%.rs
 	rustc $<
