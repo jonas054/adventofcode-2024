@@ -11,7 +11,7 @@ Here's my attempt.
 - Day 4: ✅ ✅ Haskell
 - Day 5: ✅ ✅ Bash
 - Day 6: ✅ ✅ Rust
-- Day 7: Pascal
+- Day 7: ✅ Pascal
 - Day 8: Erlang
 - Day 9: Elixir
 - Day 10: C#
