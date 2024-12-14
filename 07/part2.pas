@@ -1,3 +1,5 @@
+{$mode objFPC}
+
 Uses sysutils;
 
 type Nrlist = array of Int64;
@@ -871,60 +873,36 @@ const
     );
 
 var
-   tail : Nrlist;
    list : Nrlist;
    sum  : Int64;
-
-procedure dump(total : Int64; numbers : Nrlist );
-var
-   i :  Int64;
-begin
-   write(total, ': ');
-   for i := 0 to length(numbers) - 1 do
-      write(numbers[i], ' ');
-   writeln()
-end;
 
 function are_equal(total : Int64; numbers: Nrlist): boolean;
 var
    copied : array of Int64;
    a, b   : Int64;
 begin
-   // dump(total, numbers);
    if length(numbers) = 1 then
-      begin
-         are_equal := (total = numbers[0])
-      end
-   else
-      begin
-         copied := Copy(numbers, 1, length(numbers));
-         a := numbers[0];
-         b := numbers[1];
-         copied[0] := a + b;
-         are_equal := are_equal(total, copied);
-         if not are_equal then
-            begin
-               copied[0] := a * b;
-               are_equal := are_equal(total, copied)
-            end;
-         if not are_equal then
-            begin
-               copied[0] := StrToInt64(IntToStr(a) + IntToStr(b));
-               are_equal := are_equal(total, copied)
-            end
-      end
-end;
+      exit(total = numbers[0]);
 
+   copied := Copy(numbers, 1, length(numbers));
+   a := numbers[0];
+   b := numbers[1];
+   copied[0] := a + b;
+   if are_equal(total, copied) then
+      exit(true);
+
+   copied[0] := a * b;
+   if are_equal(total, copied) then
+      exit(true);
+
+   copied[0] := StrToInt64(IntToStr(a) + IntToStr(b));
+   exit(are_equal(total, copied))
+end;
 
 begin
    sum := 0;
    for list in INPUT do
-      begin
-         tail := Copy(list, 1, length(list));
-         if are_equal(list[0], tail) then
-            begin
-               sum := sum + list[0]
-            end
-      end;
+      if are_equal(list[0], Copy(list, 1, length(list))) then
+         sum := sum + list[0];
    Writeln('sum: ', sum) // 333027885676693
 end.
