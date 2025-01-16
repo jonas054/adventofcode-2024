@@ -53,22 +53,26 @@ var INPUT = new List<string> {
   "30010966763987014589210001456565589765432"
 };
 
-var sum = 0;
+var sum1 = 0;
+var sum2 = 0;
 for (var y = 0; y < INPUT.Count; ++y) {
     var line = INPUT[y];
     for (var x = 0; x < line.Length; ++x) {
         if (line[x] == '0') {
-            sum += FindTops(x, y).Distinct().ToList().Count;
+            var tops = FindTops(x, y);
+            sum1 += tops.Distinct().ToList().Count;
+            sum2 += tops.ToList().Count;
         }
     }
 }
-Console.WriteLine(sum);
+Console.WriteLine($"Part 1: {sum1}");
+Console.WriteLine($"Part 2: {sum2}");
 
-List<Tuple<int, int>> FindTops(int x, int y) {
+List<int> FindTops(int x, int y) {
     var current = INPUT[y][x];
-    var result = new List<Tuple<int, int>>();
+    var result = new List<int>();
     if (current == '9') {
-        result.Add(Tuple.Create(x, y));
+        result.Add(100 * x + y);
         return result;
     }
     var DIRECTIONS = new List<Tuple<int, int>> {
