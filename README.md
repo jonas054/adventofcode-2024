@@ -15,7 +15,7 @@ Here's my attempt.
 - Day 8: ✅ ✅ Erlang
 - Day 9: ✅ ✅ Elixir
 - Day 10: ✅ ✅ C#
-- Day 11: ✅ C
+- Day 11: ✅ ✅ C
 - Day 12: Ada
 - Day 13: Lisp/Clojure
 - Day 14: Go

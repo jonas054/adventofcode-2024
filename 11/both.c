@@ -5,6 +5,45 @@
 long int EXAMPLE[] = { 125, 17 };
 long int INPUT[] = { 2, 72, 8949, 0, 981038, 86311, 246, 7636740 };
 
+#define SIZE 200000
+
+struct DataItem {
+  long int key;
+  long int data;
+};
+
+struct DataItem* hashArray[SIZE];
+
+long int hashCode(long int key) {
+  return (37 * key) % SIZE;
+}
+
+struct DataItem* search(long int key) {
+  int hashIndex = hashCode(key);
+	
+  while (hashArray[hashIndex] != NULL) {
+    if (hashArray[hashIndex]->key == key)
+      return hashArray[hashIndex];
+			
+    hashIndex = (hashIndex + 1) % SIZE;
+  }
+	
+  return NULL;
+}
+
+void insert(long int key, long int data) {
+  struct DataItem* item = (struct DataItem*) malloc(sizeof(struct DataItem));
+  item->data = data;
+  item->key = key;
+
+  int hashIndex = hashCode(key);
+
+  while (hashArray[hashIndex] != NULL)
+    hashIndex = (hashIndex + 1) % SIZE;
+	
+  hashArray[hashIndex] = item;
+}
+
 long int blink(long int stones[], long int length, int times) {
   if (times == 0)
     return length;
@@ -33,10 +72,19 @@ long int blink(long int stones[], long int length, int times) {
       newStones[0] = stone * 2024;
     }
   }
-  return blink(newStones, newStonesLength, times - 1);
+  long int key = stone * 100 + times;
+  struct DataItem* cachedItem = search(key);
+  if (cachedItem)
+    return cachedItem->data;
+
+  long int b = blink(newStones, newStonesLength, times - 1);
+  insert(key, b);
+  return b;
 }
 
 int main() {
-  printf("Part 1: %ld\n", blink(INPUT, sizeof(INPUT) / sizeof(INPUT[0]), 25)); // 202019
+  int inputSize = sizeof(INPUT) / sizeof(INPUT[0]);
+  printf("Part 1: %ld\n", blink(INPUT, inputSize, 25)); // 202019
+  printf("Part 2: %ld\n", blink(INPUT, inputSize, 75)); // 239321955280205
   return 0;
 }
