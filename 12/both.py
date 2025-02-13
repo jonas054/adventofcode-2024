@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
+from collections import defaultdict
+from itertools import groupby
+import pprint
+
 SMALL_EXAMPLE = [
   'AAAA',
   'BBCD',
   'BBCC',
   'EEEC'
-].freeze
+]
 
 EXAMPLE = [
   # 0123456789
@@ -19,7 +23,7 @@ EXAMPLE = [
   'MIIIIIJJEE', # 7
   'MIIISIJEEE', # 8
   'MMMISSJEEE'  # 9
-].freeze
+]
 
 PUZZLE_INPUT = [
   'WEEEEEFFFFFFFFFFFTTTTTTTTTTOBBBBQGGGQQQQQQQQQQQQQQQEEGGGGGGGGGGGGGOEMMMMMMMMMMMCMMMIIIIINWWWWWWDDDDDDDDDDDOOOOOOOOOOOOOOOOOXXXXWWWWWWWWWWWWW',
@@ -162,73 +166,70 @@ PUZZLE_INPUT = [
   'GGGGGGGGGGGGOUUUFFFIIIIINNNNNNNNNNNNEEEEEBBBBBBBBBBBBBBBEEEEEEEETTTTTTTTTTTTTTTTEUUUUUUFFSSKKKKSSSSGGGGGGGGGGMMMMMMMMVVVMMMNNNNNNNNNGGGGGGGG',
   'GGGGGGGGGGOGOOUOOFIIIIFFNNNNNNNNNNNEEEEEEEEEBBBBBBBBBBBBEEEEEEEETTTTTTTTTTTTTTTTEUUUUUUFFFKKKKKKSSSSSGGGGGGGGGMMMMMMMMMMMMNNNNNNNNNNSGGGGFGG',
   'VGGGGGGGGGOOOOOOOFFFFFFFNNNNNNNNNNNNNEEEEEEEEBBBBBBBBBBBEEEEEEEEEETTTTTTTTTTTTTEEEUUUUUFXXKKKKKKKSSSSGGGNGGGJGMMMMMMMMMMMMNNNNNNNJNNSSGFFFGG'
-].freeze
+]
 
 INPUT = PUZZLE_INPUT
-DIRECTIONS = [0 - 1i, 0 + 1i, 1 + 0i, -1 + 0i].freeze
-@regions = {}
-@explored = {}
+DIRECTIONS = [0+1j, 0-1j, 1, -1 ]
+explored = set()
+regions = defaultdict(list)
 
-class Complex # :nodoc:
-  alias x real
-  alias y imag
-  def invert
-    Complex(y, x)
-  end
-end
+def main():
+    for y in range(len(INPUT)):
+        row = INPUT[y]
+        for x in range(len(row)):
+            explore(complex(x, y), len(regions.items()))
 
+    print('Part 1:', cost(regions, len)) # 1319878
+    print('Part 2:', cost(regions, lambda x: nr_of_sides(x))) # 784982
 
-def main
-  INPUT.each_with_index do |row, y|
-    row.chars.each_index { |x| explore(Complex(x, y), @regions.size) }
-  end
+def cost(regions, func):
+    return sum([len(region) * func(flatten([fences(pos) for pos in region]))
+                for region in regions.values()])
 
-  print 'Part 1: ', cost(&:length), "\n" # 1319878
-  print 'Part 2: ', cost { nr_of_sides(_1) }, "\n" # 784982
-end
+def flatten(list_of_lists):
+    return [elem for lst in list_of_lists for elem in lst]
 
-def cost
-  @regions.values.sum do |region|
-    region.size * yield(region.map { fences(_1) }.flatten)
-  end
-end
-
-def explore(pos, id)
-  return if @explored.key?(pos) # Already explored?
-
-  @explored[pos] = true
-  @regions[id] ||= []
-  @regions[id] += [pos]
-  DIRECTIONS.each { explore(pos + _1, id) if same_plant?(pos + _1, pos) }
-end
+def explore(pos, region_id):
+    if pos not in explored: # Not already explored?
+        explored.add(pos)
+        regions[region_id] += [pos]
+        for direction in DIRECTIONS:
+            if has_same_plant(pos + direction, pos):
+                explore(pos + direction, region_id)
 
 # Returns an array of positions and directions in which a fence is needed.
-def fences(pos)
-  DIRECTIONS.reject { same_plant?(pos + _1, pos) }
-            .map { { pos: pos, dir: _1 } }
-end
+def fences(pos):
+    return [{ "pos": pos, "dir": direction }
+            for direction in DIRECTIONS if not has_same_plant(pos + direction, pos)]
 
-def same_plant?(pos_a, pos_b)
-  (0...INPUT[0].length).cover?(pos_a.x) &&
-    (0...INPUT.length).cover?(pos_a.y) &&
-    INPUT[pos_a.y][pos_a.x] == INPUT[pos_b.y][pos_b.x]
-end
+def has_same_plant(pos_a, pos_b):
+    return is_within(pos_a) and is_within(pos_b) and get(pos_a) == get(pos_b)
 
-def nr_of_sides(fencing)
-  # The dir values are the direction from a position towards where its fencing
-  # is, so the inverted value is the delta beween two adjacent fences on the
-  # same side of a region.
-  fencing.group_by { _1[:dir] }
-         .map { |dir, fences| discount(fences, dir.invert) }
-         .sum
-end
+def is_within(pos):
+    return (pos.real >= 0 and
+            pos.imag >= 0 and
+            pos.imag < len(INPUT) and
+            pos.real < len(INPUT[round(pos.imag)]))
+
+def get(pos):
+    return INPUT[round(pos.imag)][round(pos.real)]
+
+def nr_of_sides(fencing):
+    # The dir values are the direction from a position towards where its fencing
+    # is, so the inverted value is the delta beween two adjacent fences on the
+    # same side of a region.
+    sorted_fencing = sorted(fencing, key=lambda x: repr(x["dir"]))
+    grouped = groupby(sorted_fencing, key=lambda x: x["dir"])
+    return sum([discount(list(fences), invert(direction))
+                for direction, fences in grouped])
+
+def invert(c):
+    return complex(c.imag, c.real)
 
 # Returns the number of given fences without the ones that are just a
 # continuation of another fence, based on the given delta.
-def discount(fences, delta)
-  fences.count do |fence|
-    fences.none? { |other| other[:pos] == fence[:pos] + delta }
-  end
-end
+def discount(fences, delta):
+    return len([fence for fence in fences
+                if not any([other for other in fences if other['pos'] == fence['pos'] + delta])])
 
-main
+main()
