@@ -17,12 +17,12 @@ Here's my attempt.
 - Day 10: ✅ ✅ C#
 - Day 11: ✅ ✅ C
 - Day 12: ✅ ✅ Python
-- Day 13: Lisp/Clojure
+- Day 13: ✅ ✅ C++
 - Day 14: Go
 - Day 15: Groovy
 - Day 16: Scala
 - Day 17: Smalltalk
-- Day 18: Basic?
+- Day 18: Lisp/Clojure?
 - Day 19: Ada?
 - Day 20: Perl
 - Day 21: Java
