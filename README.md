@@ -18,15 +18,15 @@ Here's my attempt.
 - Day 11: ✅ ✅ C
 - Day 12: ✅ ✅ Python
 - Day 13: ✅ ✅ C++
-- Day 14: Go
+- Day 14: ✅ ✅ Java
 - Day 15: Groovy
 - Day 16: Scala
 - Day 17: Smalltalk
 - Day 18: Lisp/Clojure?
 - Day 19: Ada?
 - Day 20: Perl
-- Day 21: Java
+- Day 21: Go?
 - Day 22: JavaScript
-- Day 23: C++
+- Day 23: Basic?
 - Day 24: Kotlin
 - Day 25: Ruby
