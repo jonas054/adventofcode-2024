@@ -46,8 +46,35 @@ pub fn main() !void {
             try explore(Point{ .x = @intCast(x), .y = @intCast(y) }, regions.count());
         }
     }
+    var mapping = std.AutoHashMap(u32, std.ArrayList(Point)).init(std.heap.page_allocator);
     var it = regions.keyIterator();
     while (it.next()) |key| {
-        std.debug.print("[{d}, {d}] => {?}\n", .{ key.x, key.y, regions.get(key.*) });
+        const id = regions.get(key.*) orelse 10000;
+        // std.debug.print("[{d}, {d}] => {?}\n", .{ key.x, key.y, id });
+        if (!mapping.contains(id)) {
+            std.debug.print("Starting {?}\n", .{id});
+            try mapping.put(id, std.ArrayList(Point).init(std.heap.page_allocator));
+        }
+        const lst = mapping.get(id);
+        std.debug.print("lst: {?}\n", .{lst});
+        if (lst) |v| {
+            std.debug.print("Type of v: {?}\n", .{@TypeOf(v)});
+            try v.append(key.*);
+            std.debug.print("Appending [{d}, {d}] to {d}\n", .{ key.x, key.y, id });
+        }
+    }
+    var mit = mapping.valueIterator();
+    while (mit.next()) |points| {
+        std.debug.print("? => {?}", .{points});
+        for (points.items) |item| {
+            std.debug.print("[{?}]", .{item});
+        }
+        std.debug.print("\n", .{});
+        // if (mapping.contains(points)) {
+        //     const lst = mapping.get(points);
+        //     if (lst) |v| {
+        //         try @constCast(&v).append(key.*);
+        //     }
+        // }
     }
 }
