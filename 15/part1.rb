@@ -132,12 +132,12 @@ end
 def make_moves(pos, moves)
   moves.chars.each do |move|
     dir = DIRECTIONS[move]
-    pos += dir if push(pos, dir, :move)
+    pos += dir if push(pos, dir)
     puts "\033[1;1HMove #{move}", @floor, ''
   end
 end
 
-def push(pos, dir, _mode = nil)
+def push(pos, dir)
   next_pos = pos + dir
   case get(next_pos)
   when '#'
