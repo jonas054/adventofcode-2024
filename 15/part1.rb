@@ -109,59 +109,56 @@ v^>>>v><<v^<>><v^vv>>v<v>^^>>v^<>><<<v><>^<^<><^v>v<>v^<<<<<v^><<v^v<v<>^<v>v^<>
 v^vv<>v^<><^<>>^<<<^>^^^<>>v<<<vv^><v<<<>v<vvv^>><<^>v<v^v><^v>>vv^^>>>^v^^v^^<^>v^vvvvvv>^^vv><^>>^^<<^^>v<^><>v>v^><>v^>^>><>>>^^><^>^<vv>>><vv^vvvvv>>>v<v<^<<v<v<v<<^<<v<v>vv><<^<<<v<<>vv^><<v^<^vvv>v^<<v>^v^>>^>^<vv^<<v<v^^^^<<<>v<^>v^>^v^>>^><^><v<<^^^^v>>^><><<<<v>><<vv^^><v^<>^<vv<^^<^<^><<<^^<^<v<^<^><<<v^vvvv>^^vv^v>v^v^^<>vv^<v^>^v^v<<v^<<^>v><^<>^<<^^<^v>^vv>>v<v<v>^><>v^<v<>v^v><>vvv^^v^<><>v<vv><v<v<vvvvv<v^^><>^^>^<^<>>^vv>^v>^v^<<>v>><<><><<^^<>^<>v>v>^v<<v<v>>v^>v<<^vv^>><v<>^>><<vv>v<^>^^v^<^<<><>vv<v><v<^v>^>v>><<^v>><<v<<>^>^>v>v>>^v^v^><<><>^^>^v>^<>><<>^>vv><v>vv<^<<>v<^<<^<<^>>^v<>^>>^>^^^>v>>^<^^^v^v^<v^^vv<<>v><^>><><vvv^<^<^vv>>v<>^v<<^^><v^v^>v><^<^<^^<>vv>>^<vv^^><v<<^^^vv<><v^<v<>v<v^v><<>^^>^vvv^v>v^^><<<><^^^<>^^v^^^>vv<>>>v>^<>v><^><<<<^><><^v^<<v^v<><v^^<<^^^><<v^v<<v^v<vv>><v<v<^><^><v^>^<v><<<^>v^^^><>vv^<>^v>>>v<>><^>>vv^>v^^<v<v^^<v<>><^>v^><v^<vv<<>vv>^^><><><>><<<><<<vv>^^^>^<>^<<^><>^<<<v<<>^vv<vvv><^^><v^<^v>>^^>v<>v>>><^<v<^<<<^<>>>vv^><^<v^^<^v
 TEXT
 
+DIRECTIONS = { '<' => -1, '>' => 1, '^' => 0 - 1i, 'v' => 0 + 1i }
+
 def main(input)
   printf "\033[2J"
   @floor = []
   moves = ''
-  x = y = nil
+  start_pos = nil
   input.lines.map(&:chomp).each do |line|
     case line
     when /^#/
-      x = line.index('@') if line.index('@')
-      y = @floor.length if x && !y
+      start_pos = Complex(line.index('@'), @floor.length) if line.index('@')
       @floor << line
     when /./
       moves << line
     end
   end
-  pos = Complex(x, y)
-  moves.chars.each do |move|
-    dir = case move
-          when '<' then -1
-          when '>' then 1
-          when '^' then 0 - 1i
-          when 'v' then 0 + 1i
-          else raise
-          end
-    pos = push(pos, dir)
-    printf "\033[1;1H"
-    puts "Move #{move}"
-    puts @floor, ''
-  end
-  score
+  make_moves(start_pos, moves)
+  score('O')
 end
 
-def push(pos, dir)
+def make_moves(pos, moves)
+  moves.chars.each do |move|
+    dir = DIRECTIONS[move]
+    pos += dir if push(pos, dir, :move)
+    puts "\033[1;1HMove #{move}", @floor, ''
+  end
+end
+
+def push(pos, dir, _mode = nil)
   next_pos = pos + dir
   case get(next_pos)
   when '#'
-    pos
+    false
   when '.'
     move(pos, next_pos)
+    true
   when 'O'
     push(next_pos, dir)
-    return move(pos, next_pos) if get(next_pos) == '.'
+    if get(next_pos) == '.'
+      move(pos, next_pos)
+      return true
+    end
 
-    pos
-  else
-    raise "Unhandled: '#{get(next_pos)}'"
+    false
   end
 end
 
 def move(pos, next_pos)
   set(next_pos, get(pos))
   set(pos, '.')
-  next_pos
 end
 
 def get(pos)
@@ -172,14 +169,14 @@ def set(pos, value)
   @floor[pos.imag][pos.real] = value
 end
 
-def score
+def score(box)
   result = 0
   @floor.each_with_index do |row, y|
     row.chars.each_with_index do |char, x|
-      result += 100 * y + x if char == 'O'
+      result += 100 * y + x if char == box
     end
   end
   result
 end
 
-p main(PUZZLE_INPUT) # 1511865
+p main(PUZZLE_INPUT) if $PROGRAM_NAME == __FILE__ # 1511865

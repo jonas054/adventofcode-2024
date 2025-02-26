@@ -1,0 +1,8 @@
+inherit_from: .rubocop_todo.yml
+
+AllCops:
+  NewCops: enable
+
+# This cop supports safe autocorrection (--autocorrect).
+Style/PerlBackrefs:
+  Enabled: false
