@@ -19,7 +19,7 @@ Here's my attempt.
 - Day 12: ✅ ✅ Python
 - Day 13: ✅ ✅ C++
 - Day 14: ✅ ✅ Java
-- Day 15: ✅ Groovy
+- Day 15: ✅ ✅ Groovy
 - Day 16: Scala
 - Day 17: Smalltalk
 - Day 18: Lisp/Clojure?
