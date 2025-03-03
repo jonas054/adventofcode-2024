@@ -182,7 +182,7 @@ PUZZLE_INPUT = <<~TEXT
   #############################################################################################################################################
 TEXT
 
-DIRECTIONS = [-1, 1, 0 - 1i, 0 + 1i]
+DIRECTIONS = [1, 0 - 1i, -1, 0 + 1i]
 
 def main(input)
   # printf "\033[2J"
@@ -194,45 +194,87 @@ def main(input)
     end_pos ||= check(line, 'E')
     @floor << line
   end
-  @best = 1_000_000_000
-  p search(0, start_pos, end_pos, 1, {})
+  loop do
+    changed = false
+    @floor.each_with_index do |line, y|
+      next if y == 0 || y == @floor.length - 1
+
+      line.chars.each_index do |x|
+        next if x == 0 || x == line.length - 1
+
+        pos = Complex(x, y)
+        if get(pos) == '.' && pos != start_pos && pos != end_pos && dead_end?(pos)
+          @floor[y][x] = '#'
+          changed = true
+        end
+      end
+    end
+    break unless changed
+  end
+  search(0, start_pos, end_pos, 1)
+end
+
+def dead_end?(pos)
+  DIRECTIONS.count { get(pos + _1) == '#' } > 2
 end
 
 def check(line, char)
   Complex(line.index(char), @floor.length) if line.index(char)
 end
 
-def search(score, pos, end_pos, facing, visited)
-  if pos == end_pos
-    if score < @best
-      draw(visited)
-      puts score
-      @best = score
-    end
-    return score
+def search(score, start_pos, end_pos, facing)
+  limit, v = find_one(score, start_pos, end_pos, facing, {}, 1_000_000_000)
+  prev = nil
+  while limit
+    draw(v, limit) if v
+    prev = limit
+    limit, v = find_one(score, start_pos, end_pos, facing, {}, limit * 9 / 10)
   end
+  limit = prev
+  while limit
+    draw(v, limit) if v
+    prev = limit
+    limit, v = find_one(score, start_pos, end_pos, facing, {}, limit)
+  end
+  puts Rainbow("Answer: #{prev}").bg(:blue)
+end
 
-  return nil if score > @best
+def find_one(score, pos, end_pos, facing, visited, limit)
+  return nil if score >= limit
+  return score, visited.merge(pos => true) if pos == end_pos
 
-  DIRECTIONS.map do |dir|
+  directions = possible_directions(pos, facing, visited)
+
+  return nil if directions.empty?
+
+  directions.each do |dir|
+    s, v = find_one(score + (dir == facing ? 1 : 1001), pos + dir, end_pos, dir,
+                    visited.merge(pos => true), limit)
+    return s, v if s
+  end
+  nil
+end
+
+def possible_directions(pos, facing, visited)
+  ([facing] + (DIRECTIONS - [facing])).reject do |dir|
     next_pos = pos + dir
-    next if get(next_pos) == '#' || visited.key?(next_pos)
-
-    search(score + (dir == facing ? 1 : 1001), next_pos, end_pos, dir,
-           visited.merge(pos => true))
-  end.compact.min
+    get(next_pos) == '#' || visited.key?(next_pos)
+  end
 end
 
 def get(pos)
   @floor[pos.imag][pos.real]
 end
 
-def draw(visited)
+def draw(visited, limit)
   @floor.each_with_index do |line, y|
     line.chars.each_with_index do |char, x|
-      ix = visited.keys.index(Complex(x, y))
-      char_to_print = if ix
-                        Rainbow(case visited.keys[ix] - visited.keys[ix - 1]
+      keys = visited.keys
+      ix = keys.index(Complex(x, y))
+      char_to_print = if ix == keys.length - 1
+                        Rainbow('E').bg(:green)
+                      elsif ix
+                        Rainbow(case keys[ix] - keys[ix - 1]
                                 when -1 then '<'
                                 when 1 then '>'
                                 when 0 + 1i then 'v'
@@ -240,19 +282,25 @@ def draw(visited)
                                 else 'S'
                                 end).bg(:green)
                       else
-                        case char
-                        when '.' then ' '
-                        when 'E' then Rainbow('E').bg(:green)
-                        else char
-                        end
+                        char.tr('.', ' ')
                       end
       print char_to_print
     end
     puts
   end
+  score = visited.size - 1
+  directions = visited.keys.each_cons(2).map { |a, b| b - a }
+  ([1] + directions).each_cons(2) do |a, b|
+    score += 1000 if a != b
+  end
+  puts "=> #{score}"
+  puts "-> #{limit}" if limit != score
+end
+
+def calculate
 end
 
 main(EXAMPLE_1) # 7036
 main(EXAMPLE_2) # 11048
-main(PUZZLE_INPUT) # 511684 is too high
+# main(PUZZLE_INPUT) # > 67266 and 134532 is too high
 puts 'done'
