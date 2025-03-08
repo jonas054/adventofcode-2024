@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rainbow'
 
 EXAMPLE_1 = <<~TEXT
@@ -182,125 +184,212 @@ PUZZLE_INPUT = <<~TEXT
   #############################################################################################################################################
 TEXT
 
-DIRECTIONS = [1, 0 - 1i, -1, 0 + 1i]
+class Complex # :nodoc:
+  alias x real
+  alias y imag
+  def simple
+    imag == 0 ? real : self
+  end
+end
+
+Edge = Struct.new(:cost, :nodes)
+Node = Struct.new(:position, :type, :neighbors)
+
+DIRECTIONS = { 1 => '>', 0 - 1i => '^', -1 => '<', 0 + 1i => 'v' }.freeze
 
 def main(input)
-  # printf "\033[2J"
+  printf "\033[2J"
   @floor = []
-  start_pos = nil
-  end_pos = nil
-  input.lines.map(&:chomp).each do |line|
-    start_pos ||= check(line, 'S')
-    end_pos ||= check(line, 'E')
+  @start_pos = nil
+  @end_pos = nil
+  input.lines.map(&:chomp).each_with_index do |line, _y|
+    @start_pos ||= check(line, 'S')
+    @end_pos ||= check(line, 'E')
     @floor << line
   end
+  fill_dead_ends
+  mark_turningpoints
+  puts @floor
+  p @start_pos
+  @graph = { @start_pos => find_neighbors(@start_pos, 1, 0) }
+  nodes = [@end_pos]
+  each_square { nodes << _1 if get(_1) == '.' }
+  nodes.each do |node|
+    @graph[node] = {}
+    ways_out(node).each do |dir|
+      @graph[node].merge!(find_neighbors(node, dir, 0))
+    end
+  end
+  pp @graph
+  # visited = build(@start_pos, 1, {})
+  answer = dijkstra(@graph, @start_pos)
+  pp answer
+  puts Rainbow("Answer: #{answer[@end_pos]}").bg(:blue)
+end
+
+def fill_dead_ends
   loop do
     changed = false
-    @floor.each_with_index do |line, y|
-      next if y == 0 || y == @floor.length - 1
-
-      line.chars.each_index do |x|
-        next if x == 0 || x == line.length - 1
-
-        pos = Complex(x, y)
-        if get(pos) == '.' && pos != start_pos && pos != end_pos && dead_end?(pos)
-          @floor[y][x] = '#'
-          changed = true
-        end
+    each_square do |pos|
+      if get(pos) == '.' && pos != @start_pos && pos != @end_pos && dead_end?(pos)
+        set(pos, '#')
+        changed = true
       end
     end
     break unless changed
   end
-  search(0, start_pos, end_pos, 1)
 end
 
-def dead_end?(pos)
-  DIRECTIONS.count { get(pos + _1) == '#' } > 2
+def mark_turningpoints
+  each_square do |pos|
+    next if [@end_pos, @start_pos].include?(pos)
+
+    ways_out = ways_out(pos)
+    set(pos, '+') if ways_out.length > 2 # crossroads
+    set(pos, '&') if ways_out.length == 2 && ways_out.sum.abs != 0 # turn
+  end
 end
+
+def each_square
+  @floor.each_with_index do |line, y|
+    line.chars.each_with_index do |char, x|
+      yield Complex(x, y) if char != '#'
+    end
+  end
+end
+
+def ways_out(pos) = DIRECTIONS.keys.reject { get(pos + _1) == '#' }
+
+def find_neighbors(pos, facing, cost)
+  next_pos = pos + facing
+  case get(next_pos)
+  when '.', 'E'
+    { next_pos => cost + 1 }
+  when 'S'
+    {}
+  when '&'
+    ways_out = ways_out(next_pos) - [-facing]
+    raise unless ways_out.size == 1
+
+    find_neighbors(next_pos, ways_out.first, cost + 1001)
+  when '+'
+    ways_out = ways_out(next_pos) - [-facing]
+    raise unless ways_out.size > 1
+
+    result = {}
+    ways_out.each do |dir|
+      score = (dir + facing).abs == 2 ? 0 : 1000
+      result.merge!(find_neighbors(next_pos, dir, cost + score + 1))
+    end
+    result
+  when '#'
+    raise "Unexpected: #{get(next_pos)} at #{pos} facing #{facing}" unless pos == @start_pos
+
+    result = {}
+    ways_out(pos).each do |dir|
+      result.merge!(find_neighbors(pos, dir, 1000))
+    end
+    result
+  else
+    raise "Unexpected: #{get(next_pos)}"
+  end
+end
+
+def dead_end?(pos) = DIRECTIONS.keys.count { get(pos + _1) == '#' } > 2
 
 def check(line, char)
   Complex(line.index(char), @floor.length) if line.index(char)
 end
 
-def search(score, start_pos, end_pos, facing)
-  limit, v = find_one(score, start_pos, end_pos, facing, {}, 1_000_000_000)
-  prev = nil
-  while limit
-    draw(v, limit) if v
-    prev = limit
-    limit, v = find_one(score, start_pos, end_pos, facing, {}, limit * 9 / 10)
-  end
-  limit = prev
-  while limit
-    draw(v, limit) if v
-    prev = limit
-    limit, v = find_one(score, start_pos, end_pos, facing, {}, limit)
-  end
-  puts Rainbow("Answer: #{prev}").bg(:blue)
-end
-
-def find_one(score, pos, end_pos, facing, visited, limit)
-  return nil if score >= limit
-  return score, visited.merge(pos => true) if pos == end_pos
-
-  directions = possible_directions(pos, facing, visited)
-
-  return nil if directions.empty?
-
-  directions.each do |dir|
-    s, v = find_one(score + (dir == facing ? 1 : 1001), pos + dir, end_pos, dir,
-                    visited.merge(pos => true), limit)
-    return s, v if s
-  end
-  nil
-end
-
 def possible_directions(pos, facing, visited)
-  ([facing] + (DIRECTIONS - [facing])).reject do |dir|
+  ([facing] + (DIRECTIONS.keys - [facing, -facing])).reject do |dir|
     next_pos = pos + dir
     get(next_pos) == '#' || visited.key?(next_pos)
   end
 end
 
-def get(pos)
-  @floor[pos.imag][pos.real]
+def get(pos) = @floor[pos.y][pos.x]
+
+def set(pos, char)
+  @floor[pos.y][pos.x] = char
 end
 
-def draw(visited, limit)
+# graph = {
+#   'A' => { 'B' => 1, 'C' => 4 },
+#   'B' => { 'A' => 1, 'C' => 2, 'D' => 5 },
+#   'C' => { 'A' => 4, 'B' => 2, 'D' => 1 },
+#   'D' => { 'B' => 5, 'C' => 1 }
+# }
+
+def dijkstra(graph, start)
+  distances = {}
+  visited = {}
+  nodes = graph.keys
+
+  nodes.each { |node| distances[node] = Float::INFINITY }
+  distances[start] = 0
+
+  until nodes.empty?
+    min_node = nodes.min_by { visited[_1] ? Float::INFINITY : distances[_1] }
+
+    break if distances[min_node] == Float::INFINITY
+
+    graph[min_node].each do |neighbor, value|
+      alt = distances[min_node] + value
+      distances[neighbor] = alt if alt < distances[neighbor]
+    end
+
+    visited[min_node] = true
+    nodes.delete(min_node)
+  end
+
+  distances
+end
+
+def draw(visited)
+  # int "\033[1;1H"
   @floor.each_with_index do |line, y|
     line.chars.each_with_index do |char, x|
       keys = visited.keys
-      ix = keys.index(Complex(x, y))
-      char_to_print = if ix == keys.length - 1
-                        Rainbow('E').bg(:green)
-                      elsif ix
-                        Rainbow(case keys[ix] - keys[ix - 1]
-                                when -1 then '<'
-                                when 1 then '>'
-                                when 0 + 1i then 'v'
-                                when 0 - 1i then '^'
-                                else 'S'
-                                end).bg(:green)
-                      else
-                        char.tr('.', ' ')
-                      end
-      print char_to_print
+      pos = Complex(x, y)
+      ix = keys.index(pos)
+      print(if pos == @end_pos
+              ix == keys.length - 1 ? green('E') : 'E'
+            elsif ix
+              green(DIRECTIONS[(keys[ix] - keys[ix - 1]).simple] || 'S')
+            else
+              char.tr('.', ' ')
+            end)
     end
     puts
   end
-  score = visited.size - 1
-  directions = visited.keys.each_cons(2).map { |a, b| b - a }
-  ([1] + directions).each_cons(2) do |a, b|
-    score += 1000 if a != b
-  end
-  puts "=> #{score}"
-  puts "-> #{limit}" if limit != score
 end
 
-def calculate
-end
+def green(str) = Rainbow(str).bg(:green)
 
-main(EXAMPLE_1) # 7036
-main(EXAMPLE_2) # 11048
-# main(PUZZLE_INPUT) # > 67266 and 134532 is too high
-puts 'done'
+EXAMPLE_A = <<~TEXT
+  #####
+  #S.E#
+  #####
+TEXT
+
+EXAMPLE_B = <<~TEXT
+  #####
+  ###E#
+  ###.#
+  #S..#
+  #####
+TEXT
+
+EXAMPLE_C = <<~TEXT
+  #####
+  #...#
+  #.#.#
+  #...#
+  #.#E#
+  #.#.#
+  #S.##
+  #####
+TEXT
+
+main(PUZZLE_INPUT)
