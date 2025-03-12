@@ -190,7 +190,7 @@ class Complex # :nodoc:
   alias y imag
 end
 
-DIRECTIONS = [1, 0 - 1i, -1, 0 + 1i]
+DIRECTIONS = [1, 0 - 1i, -1, 0 + 1i].freeze
 TURN = '&'
 CROSSROADS = '+'
 WALL = '#'
@@ -198,45 +198,40 @@ ROAD = '.'
 START_POINT = 'S'
 END_POINT = 'E'
 
-def main(heading, input)
+def main(input)
   @floor = []
-  start_pos = nil
-  end_pos = nil
+  @start_pos = nil
+  @end_pos = nil
   input.lines.map(&:chomp).each_with_index do |line, _y|
-    start_pos ||= check(line, START_POINT)
-    end_pos ||= check(line, END_POINT)
+    @start_pos ||= check(line, START_POINT)
+    @end_pos ||= check(line, END_POINT)
     @floor << line
   end
-  fill_dead_ends(start_pos, end_pos)
-  mark_turningpoints(start_pos, end_pos)
-  graph = Graph.new
-  find_neighbors(start_pos, 1, 0).each do |dest, cost|
-    graph.add_edge(start_pos, dest, cost)
-  end
-  nodes = [end_pos]
+  fill_dead_ends
+  mark_turningpoints
+  puts @floor
+  find_neighbors(@start_pos, 1, 0).each do |dest, cost|
+  graph = { @start_pos =>  }
+  pp graph
+  nodes = [@end_pos]
   each_square { nodes << _1 if get(_1) == ROAD }
   nodes.each do |node|
-    ways_out(node).each do |dir|
-      find_neighbors(node, dir, 0).each do |dest, cost|
-        graph.add_edge(node, dest, cost)
-      end
-    end
+    graph[node] = {}
+    ways_out(node).each { graph[node].merge!(find_neighbors(node, _1, 0)) }
   end
-  shortest_paths = graph.shortest_paths(start_pos)[end_pos]
-  distance = shortest_paths[0][:distance]
-  puts "#{heading}, part 1: #{distance}"
-  # pp shortest_paths.select[:distance]
+  result = dijkstra(graph, @start_pos)
+  puts result[@end_pos]
 end
 
 def check(line, char)
   Complex(line.index(char), @floor.length) if line.index(char)
 end
 
-def fill_dead_ends(start_pos, end_pos)
+def fill_dead_ends
   loop do
     changed = false
     each_square do |pos|
-      if get(pos) == ROAD && pos != start_pos && pos != end_pos && dead_end?(pos)
+      if get(pos) == ROAD && pos != @start_pos && pos != @end_pos && dead_end?(pos)
         set(pos, WALL)
         changed = true
       end
@@ -245,9 +240,9 @@ def fill_dead_ends(start_pos, end_pos)
   end
 end
 
-def mark_turningpoints(start_pos, end_pos)
+def mark_turningpoints
   each_square do |pos|
-    next if [start_pos, end_pos].include?(pos)
+    next if [@start_pos, @end_pos].include?(pos)
 
     ways_out = ways_out(pos)
     set(pos, CROSSROADS) if ways_out.length > 2
@@ -281,7 +276,7 @@ def find_neighbors(pos, facing, cost)
       result.merge!(find_neighbors(next_pos, dir, cost + score + 1))
     end
     result
-  when WALL # Can only happen in start_pos.
+  when WALL # Can only happen in @start_pos.
     result = {}
     ways_out(pos).each { result.merge!(find_neighbors(pos, _1, 1000)) }
     result
@@ -296,24 +291,62 @@ def set(pos, char)
   @floor[pos.y][pos.x] = char
 end
 
-main('Example 1', EXAMPLE_1) # 7036
-main('Example 2', EXAMPLE_2) # 11048
-main('Puzzle input', PUZZLE_INPUT) # 114476
+def find_one_shortest_path(graph, now, target, path_info)
+  if now == target
+    print path_info
+    return
+  end
+
+  graph[now].each do |neighbor_point|
+    path_info << neighbor_point
+    find_one_shortest_path(graph, neighbor_point, target, path_info) # recursion
+    path_info = path_info[0...-1] # backtracking
+  end
+end
+
+def count(path)
+  @visited = {}
+  puts 'loop'
+  follow(path, @start_pos)
+  puts 'done'
+  p visited: @visited
+end
+
+def follow(path, pos)
+  puts (' ' * caller.size) + "follow(path, #{pos})"
+  @visited[pos] = true
+  return unless pos != @end_pos
+
+  path[pos]&.each do |next_pos|
+    loop do
+      way_out = ways_out(pos).find { |dir| (pos + dir - next_pos).abs < (pos - next_pos).abs }
+      p pos: pos, next_pos: next_pos, way_out: way_out
+      pos += way_out
+      @visited[pos] = true
+      break if pos == next_pos
+    end
+    follow(path, pos)
+  end
+end
+
+EXAMPLE_A = <<~TEXT
+  #######
+  #....E#
+  #.###.#
+  #.....#
+  #.###.#
+  #S....#
+  #######
+TEXT
+
+main(EXAMPLE_A) # Should be 45
+# main(EXAMPLE_2) # Should be 64
 
 __END__
 
-###############
-#.......#....O#
-#.#.###.#.###O#
-#.....#.#...#O#
-#.###.#####.#O#
-#.#.#.......#O#
-#.#.#####.###O#
-#..OYOYOOOOO#O#
-###X#O#####O#O#
-#OOO#O....#O#O#
-#O#X#O###.#O#O#
-#OOOOO#...#O#O#
-#O###.#.#.#O#O#
-#O..#.....#OOO#
-###############
+  #######
+  #...#E#
+  #.#.#O#
+  #OOO#O#
+  #S#OOO#
+  #######
