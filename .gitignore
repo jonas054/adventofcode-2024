@@ -1,0 +1,16 @@
+*.beam
+*.o
+*.class
+*.log
+*.hi
+*.ali
+a.out
+erl_crash.dump
+.zig-out/
+zig-out/
+.zig-cache/
+obj/
+.idea/
+
+*/part1
+*/part2
