@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require 'rainbow'
-require './graph'
-
 EXAMPLE_1 = <<~TEXT
   ###############
   #.......#....E#
@@ -190,42 +187,41 @@ class Complex # :nodoc:
   alias y imag
 end
 
-DIRECTIONS = [1, 0 - 1i, -1, 0 + 1i]
+DIRECTIONS = [1, 0 - 1i, -1, 0 + 1i].freeze
 TURN = '&'
 CROSSROADS = '+'
 WALL = '#'
 ROAD = '.'
 START_POINT = 'S'
 END_POINT = 'E'
+BEST_PATH = 'X'
 
 def main(heading, input)
+  puts heading
+  start_pos, end_pos = parse(input)
+  fill_dead_ends(start_pos, end_pos)
+  mark_turningpoints(start_pos, end_pos)
+  forwards = run_graph(start_pos, end_pos, 1)
+  answer = forwards[end_pos]
+  puts "Part 1: #{answer}"
+
+  backwards1 = run_graph(end_pos, start_pos, -1)
+  backwards2 = run_graph(end_pos, start_pos, 0 + 1i)
+  forwards.each do |node, distance|
+    set(node, BEST_PATH) if backwards1[node] + distance == answer || backwards2[node] + distance == answer
+  end
+  puts "Part 2: #{search(start_pos).size}", ''
+end
+
+def parse(input)
   @floor = []
-  start_pos = nil
-  end_pos = nil
+  start_pos = end_pos = nil
   input.lines.map(&:chomp).each_with_index do |line, _y|
     start_pos ||= check(line, START_POINT)
     end_pos ||= check(line, END_POINT)
     @floor << line
   end
-  fill_dead_ends(start_pos, end_pos)
-  mark_turningpoints(start_pos, end_pos)
-  graph = Graph.new
-  find_neighbors(start_pos, 1, 0).each do |dest, cost|
-    graph.add_edge(start_pos, dest, cost)
-  end
-  nodes = [end_pos]
-  each_square { nodes << _1 if get(_1) == ROAD }
-  nodes.each do |node|
-    ways_out(node).each do |dir|
-      find_neighbors(node, dir, 0).each do |dest, cost|
-        graph.add_edge(node, dest, cost)
-      end
-    end
-  end
-  shortest_paths = graph.shortest_paths(start_pos)[end_pos]
-  distance = shortest_paths[0][:distance]
-  puts "#{heading}, part 1: #{distance}"
-  # pp shortest_paths.select[:distance]
+  [start_pos, end_pos]
 end
 
 def check(line, char)
@@ -250,9 +246,22 @@ def mark_turningpoints(start_pos, end_pos)
     next if [start_pos, end_pos].include?(pos)
 
     ways_out = ways_out(pos)
-    set(pos, CROSSROADS) if ways_out.length > 2
-    set(pos, TURN) if ways_out.length == 2 && ways_out.sum.abs != 0
+    set(pos, CROSSROADS) if ways_out.length > 2 # crossroads
+    set(pos, TURN) if ways_out.length == 2 && ways_out.sum.abs != 0 # turn
   end
+end
+
+def run_graph(start_at, end_at, initially_facing)
+  graph = { start_at => find_neighbors(start_at, initially_facing, 0) }
+  nodes = [end_at]
+  each_square { nodes << _1 if get(_1) == ROAD }
+  nodes.each do |node|
+    graph[node] = {}
+    ways_out(node).each do |dir|
+      graph[node].merge!(find_neighbors(node, dir, 0))
+    end
+  end
+  dijkstra(graph, start_at)
 end
 
 def each_square
@@ -261,15 +270,36 @@ def each_square
   end
 end
 
-def ways_out(pos) = DIRECTIONS.reject { get(pos + _1) == WALL }
+def dijkstra(graph, start)
+  distances = {}
+  visited = {}
+  nodes = graph.keys
+
+  nodes.each { |node| distances[node] = Float::INFINITY }
+  distances[start] = 0
+
+  until nodes.empty?
+    min_node = nodes.min_by { visited[_1] ? Float::INFINITY : distances[_1] }
+
+    break if distances[min_node] == Float::INFINITY
+
+    graph[min_node].each do |neighbor, value|
+      alt = distances[min_node] + value
+      distances[neighbor] = alt if alt < distances[neighbor]
+    end
+
+    visited[min_node] = true
+    nodes.delete(min_node)
+  end
+
+  distances
+end
 
 def find_neighbors(pos, facing, cost)
   next_pos = pos + facing
   case get(next_pos)
-  when ROAD, END_POINT
+  when ROAD, END_POINT, START_POINT
     { next_pos => cost + 1 }
-  when START_POINT
-    {} # Not useful to go back to start point.
   when TURN
     ways_out = ways_out(next_pos) - [-facing]
     find_neighbors(next_pos, ways_out.first, cost + 1001)
@@ -281,14 +311,15 @@ def find_neighbors(pos, facing, cost)
       result.merge!(find_neighbors(next_pos, dir, cost + score + 1))
     end
     result
-  when WALL # Can only happen in start_pos.
+  when WALL
     result = {}
     ways_out(pos).each { result.merge!(find_neighbors(pos, _1, 1000)) }
     result
   end
 end
 
-def dead_end?(pos) = DIRECTIONS.count { get(pos + _1) == WALL } > 2
+def dead_end?(pos) = ways_out(pos).count < 2
+def ways_out(pos) = DIRECTIONS.reject { get(pos + _1) == WALL }
 
 def get(pos) = @floor[pos.y][pos.x]
 
@@ -296,24 +327,16 @@ def set(pos, char)
   @floor[pos.y][pos.x] = char
 end
 
-main('Example 1', EXAMPLE_1) # 7036
-main('Example 2', EXAMPLE_2) # 11048
-main('Puzzle input', PUZZLE_INPUT) # 114476
+def search(pos, visited = {})
+  if [START_POINT, BEST_PATH, CROSSROADS, TURN].include?(get(pos))
+    visited[pos] = true
+    DIRECTIONS.map { pos + _1 }.each do |next_pos|
+      search(next_pos, visited) unless get(next_pos) == WALL || visited.key?(next_pos)
+    end
+  end
+  visited
+end
 
-__END__
-
-###############
-#.......#....O#
-#.#.###.#.###O#
-#.....#.#...#O#
-#.###.#####.#O#
-#.#.#.......#O#
-#.#.#####.###O#
-#..OYOYOOOOO#O#
-###X#O#####O#O#
-#OOO#O....#O#O#
-#O#X#O###.#O#O#
-#OOOOO#...#O#O#
-#O###.#.#.#O#O#
-#O..#.....#OOO#
-###############
+main('Example 1', EXAMPLE_1) # 7036, 45
+main('Example 2', EXAMPLE_2) # 11048, 64
+main('Puzzle input', PUZZLE_INPUT) # 114476, 508
