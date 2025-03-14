@@ -182,11 +182,6 @@ PUZZLE_INPUT = <<~TEXT
   #############################################################################################################################################
 TEXT
 
-class Complex # :nodoc:
-  alias x real
-  alias y imag
-end
-
 DIRECTIONS = [1, 0 - 1i, -1, 0 + 1i].freeze
 TURN = '&'
 CROSSROADS = '+'
@@ -194,7 +189,7 @@ WALL = '#'
 ROAD = '.'
 START_POINT = 'S'
 END_POINT = 'E'
-BEST_PATH = 'X'
+BEST_PATH = 'B'
 
 def main(heading, input)
   puts heading
@@ -205,12 +200,11 @@ def main(heading, input)
   answer = forwards[end_pos]
   puts "Part 1: #{answer}"
 
-  backwards1 = run_graph(end_pos, start_pos, -1)
-  backwards2 = run_graph(end_pos, start_pos, 0 + 1i)
+  backwards = [-1, 0 + 1i].map { run_graph(end_pos, start_pos, _1) }
   forwards.each do |node, distance|
-    set(node, BEST_PATH) if backwards1[node] + distance == answer || backwards2[node] + distance == answer
+    set(node, BEST_PATH) if backwards.any? { _1[node] + distance == answer }
   end
-  puts "Part 2: #{search(start_pos).size}", ''
+  puts "Part 2: #{search(start_pos, Hash.new).size}", ''
 end
 
 def parse(input)
@@ -224,9 +218,7 @@ def parse(input)
   [start_pos, end_pos]
 end
 
-def check(line, char)
-  Complex(line.index(char), @floor.length) if line.index(char)
-end
+def check(line, char) = line.index(char) ? Complex(line.index(char), @floor.length) : nil
 
 def fill_dead_ends(start_pos, end_pos)
   loop do
@@ -284,8 +276,7 @@ def dijkstra(graph, start)
     break if distances[min_node] == Float::INFINITY
 
     graph[min_node].each do |neighbor, value|
-      alt = distances[min_node] + value
-      distances[neighbor] = alt if alt < distances[neighbor]
+      distances[neighbor] = [distances[min_node] + value, distances[neighbor]].min
     end
 
     visited[min_node] = true
@@ -301,30 +292,23 @@ def find_neighbors(pos, facing, cost)
   when ROAD, END_POINT, START_POINT
     { next_pos => cost + 1 }
   when TURN
-    ways_out = ways_out(next_pos) - [-facing]
-    find_neighbors(next_pos, ways_out.first, cost + 1001)
+    find_neighbors(next_pos, (ways_out(next_pos) - [-facing]).first, cost + 1001)
   when CROSSROADS
-    ways_out = ways_out(next_pos) - [-facing]
-    result = {}
-    ways_out.each do |dir|
-      score = (dir + facing).abs == 2 ? 0 : 1000
-      result.merge!(find_neighbors(next_pos, dir, cost + score + 1))
+    (ways_out(next_pos) - [-facing]).reduce({}) do |result, dir|
+      result.merge(find_neighbors(next_pos, dir, cost + ((dir + facing).abs == 2 ? 1 : 1001)))
     end
-    result
   when WALL
-    result = {}
-    ways_out(pos).each { result.merge!(find_neighbors(pos, _1, 1000)) }
-    result
+    ways_out(pos).reduce({}) { |result, dir| result.merge(find_neighbors(pos, dir, 1000)) }
   end
 end
 
 def dead_end?(pos) = ways_out(pos).count < 2
 def ways_out(pos) = DIRECTIONS.reject { get(pos + _1) == WALL }
 
-def get(pos) = @floor[pos.y][pos.x]
+def get(pos) = @floor[pos.imag][pos.real]
 
 def set(pos, char)
-  @floor[pos.y][pos.x] = char
+  @floor[pos.imag][pos.real] = char
 end
 
 def search(pos, visited = {})
