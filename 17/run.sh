@@ -1,5 +1,3 @@
-# rubocop -A
-# ruby part2.rb
-cp part1.asm part1.s
-gcc -z noexecstack -o part1 part1.s
-./part1
+# rubocop -a
+# ruby part1.rb
+gcc -z noexecstack -o part1 part1.s && ./part1
