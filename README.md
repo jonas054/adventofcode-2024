@@ -21,7 +21,7 @@ Here's my attempt.
 - Day 14: ✅ ✅ Java
 - Day 15: ✅ ✅ Groovy
 - Day 16: ✅ ✅ Ruby
-- Day 17: ✅ Assembler
+- Day 17: ✅ ✅ Assembler
 - Day 18: Lisp/Clojure?
 - Day 19: Ada?
 - Day 20: Perl
