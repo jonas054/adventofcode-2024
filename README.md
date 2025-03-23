@@ -22,11 +22,11 @@ Here's my attempt.
 - Day 15: ✅ ✅ Groovy
 - Day 16: ✅ ✅ Kotlin
 - Day 17: ✅ ✅ Assembler
-- Day 18: ✅ ✅ Ruby
+- Day 18: ✅ Scala
 - Day 19: Ada?
 - Day 20: Perl
 - Day 21: Go?
 - Day 22: JavaScript
 - Day 23: Basic?
 - Day 24: Lisp?
-- Day 25: Scala
+- Day 25: Ruby
