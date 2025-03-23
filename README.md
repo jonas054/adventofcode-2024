@@ -22,7 +22,7 @@ Here's my attempt.
 - Day 15: ✅ ✅ Groovy
 - Day 16: ✅ ✅ Kotlin
 - Day 17: ✅ ✅ Assembler
-- Day 18: Lisp/Clojure?
+- Day 18: ✅ ✅ Ruby
 - Day 19: Ada?
 - Day 20: Perl
 - Day 21: Go?
