@@ -204,7 +204,7 @@ def main(heading, input)
   forwards.each do |node, distance|
     set(node, BEST_PATH) if backwards.any? { _1[node] + distance == answer }
   end
-  puts "Part 2: #{search(start_pos, Hash.new).size}", ''
+  puts "Part 2: #{search(start_pos, {}).size}", ''
 end
 
 def parse(input)
@@ -321,6 +321,8 @@ def search(pos, visited = {})
   visited
 end
 
-main('Example 1', EXAMPLE_1) # 7036, 45
-main('Example 2', EXAMPLE_2) # 11048, 64
-main('Puzzle input', PUZZLE_INPUT) # 114476, 508
+if $PROGRAM_NAME == __FILE__
+  main('Example 1', EXAMPLE_1) # 7036, 45
+  main('Example 2', EXAMPLE_2) # 11048, 64
+  main('Puzzle input', PUZZLE_INPUT) # 114476, 508
+end
