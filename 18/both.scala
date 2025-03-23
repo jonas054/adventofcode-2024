@@ -3485,8 +3485,32 @@ val PUZZLE_INPUT = Array(
 def Point(x: Int, y: Int) = 10000000 * x + y
 
 val DIRECTIONS = List(Point(1, 0), Point(0, -1), Point(-1, 0), Point(0, 1))
+val MAX_VALUE  = 1000000000
 
-def run(input: Array[String], max: Int, count: Int): Int = {
+@main
+def both(): Unit = {
+  part1()
+  part2()
+}
+
+def part1(): Unit = {
+  println("Part 1")
+  println(s"Example: ${main(EXAMPLE, 6, 12, run1)}")              // 22
+  println(s"Puzzle input: ${main(PUZZLE_INPUT, 70, 1024, run1)}") // 322
+}
+
+def part2(): Unit = {
+  println("Part 2")
+  println(s"Example: ${main(EXAMPLE, 6, 12, run2)}")              // 6,1
+  println(s"Puzzle input: ${main(PUZZLE_INPUT, 70, 1024, run2)}") // 60,21
+}
+
+def main(
+    input: Array[String],
+    max: Int,
+    count: Int,
+    run: (Array[String], Set[Int], Array[Int], Int, Int) => String
+): String = {
   val range = List.range(0, max + 1)
   val board = Set[Int]()
   for (x <- range) {
@@ -3498,8 +3522,32 @@ def run(input: Array[String], max: Int, count: Int): Int = {
     val xy = pair.split(',')
     Point(xy(0).toInt, xy(1).toInt)
   }
-  val nonBlocked: Set[Int] = (Set() ++ board).diff(Set() ++ bytes.slice(0, count))
-  return findShortestPath(nonBlocked, max)
+  return run(input, board, bytes, max, count)
+}
+
+def run1(input: Array[String], board: Set[Int], bytes: Array[Int], max: Int, count: Int): String = {
+  val nonBlocked: Set[Int] = board.diff(Set() ++ bytes.slice(0, count))
+  return findShortestPath(nonBlocked, max).toString
+}
+
+def run2(input: Array[String], board: Set[Int], bytes: Array[Int], max: Int, count: Int): String = {
+  val firstBlocker = search(count, input.length - 1, board, bytes, max)
+  return input(firstBlocker - 1)
+}
+
+def search(first: Int, last: Int, board: Set[Int], bytes: Array[Int], max: Int): Int = {
+  val middle = (first + last) / 2
+  val result = check(board, bytes, max, middle)
+  return if (result && !check(board, bytes, max, middle - 1))
+    middle;
+  else if (result)
+    search(first, middle, board, bytes, max)
+  else
+    search(middle, last, board, bytes, max)
+}
+
+def check(board: Set[Int], bytes: Array[Int], max: Int, c: Int): Boolean = {
+  return findShortestPath(board.diff(Set() ++ bytes.slice(0, c)), max) == MAX_VALUE
 }
 
 def findShortestPath(roads: Set[Int], max: Int): Int = {
@@ -3518,17 +3566,16 @@ def dijkstra(graph: Map[Int, Map[Int, Int]], start: Int): Map[Int, Int] = {
   val distances = Map[Int, Int]()
   val visited   = Set[Int]()
   val nodes     = Set() ++ graph.keys
-  val maxValue  = 1000000000
 
-  nodes.foreach { (node) => distances(node) = maxValue }
+  nodes.foreach { (node) => distances(node) = MAX_VALUE }
   distances(start) = 0
 
   while (nodes.size > 0) {
     val minNode: Int = nodes.minBy { (node: Int) =>
-      if (visited contains node) { maxValue }
+      if (visited contains node) { MAX_VALUE }
       else { distances(node) }
     }
-    if (distances(minNode) == maxValue) {
+    if (distances(minNode) == MAX_VALUE) {
       return distances
     }
     graph(minNode).foreach { (neighbor, value) =>
@@ -3538,11 +3585,4 @@ def dijkstra(graph: Map[Int, Map[Int, Int]], start: Int): Map[Int, Int] = {
     nodes.remove(minNode)
   }
   return distances
-}
-
-@main
-def part1(): Unit = {
-  println("Part 1")
-  println(s"Example: ${run(EXAMPLE, 6, 12)}")              // 22
-  println(s"Puzzle input: ${run(PUZZLE_INPUT, 70, 1024)}") // 322
 }

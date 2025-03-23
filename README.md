@@ -22,7 +22,7 @@ Here's my attempt.
 - Day 15: ✅ ✅ Groovy
 - Day 16: ✅ ✅ Kotlin
 - Day 17: ✅ ✅ Assembler
-- Day 18: ✅ Scala
+- Day 18: ✅ ✅ Scala
 - Day 19: Ada?
 - Day 20: Perl
 - Day 21: Go?
