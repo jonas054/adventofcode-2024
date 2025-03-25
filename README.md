@@ -23,10 +23,10 @@ Here's my attempt.
 - Day 16: ✅ ✅ Kotlin
 - Day 17: ✅ ✅ Assembler
 - Day 18: ✅ ✅ Scala
-- Day 19: Ada?
+- Day 19: ✅ ✅ Ruby
 - Day 20: Perl
 - Day 21: Go?
 - Day 22: JavaScript
 - Day 23: Basic?
 - Day 24: Lisp?
-- Day 25: Ruby
+- Day 25: ?
