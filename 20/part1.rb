@@ -1,4 +1,5 @@
-require 'json'
+require 'set'
+require 'parallel'
 
 EXAMPLE = <<~TEXT
   ###############
@@ -29,8 +30,24 @@ def Point(*args) = Complex(*args)
 
 def main(heading, input, threshold)
   puts heading
-  nodes = []
-  walls = []
+  nodes, walls, start_point, end_point = parse(input)
+  graph = build_graph(nodes)
+  forwards, backwards = Parallel.map([start_point, end_point]) { dijkstra(graph, _1) }
+  puts "  Original shortest distance: #{forwards[end_point]}"
+  total = find_cheats(nodes, walls)
+          .map { [forwards[_1] + backwards[_2], forwards[_2] + backwards[_1]].min }
+          .map { forwards[end_point] - _1 - 2 }
+          .flatten
+          .group_by(&:to_i)
+          .map { [_1, _2.length / 2] }
+          .select { _1.first >= threshold }
+          .sum { _2 }
+  puts "  #{total} cheats save at least #{threshold} picoseconds"
+end
+
+def parse(input)
+  nodes = Set.new
+  walls = Set.new
   start_point = end_point = nil
   input.lines.map(&:chomp).each_with_index do |line, y|
     line.chars.each_with_index do |char, x|
@@ -43,49 +60,20 @@ def main(heading, input, threshold)
     end
   end
   nodes << start_point << end_point
-  original_graph = build_graph(nodes).freeze
-  normal = dijkstra(original_graph, start_point)[end_point]
-  puts "  Original shortest distance: #{normal}"
-  cheats = find_cheats(nodes, walls)
-  puts "  Found #{cheats.size} cheats"
-  distances = cheats.each_with_index.map do |(from, tos), ix|
-    puts 100 * ix / cheats.size
-    tos.map do |to|
-      graph = deep_copy(original_graph)
-      graph[from][to] = 2
-      graph[to][from] = 2
-      normal - dijkstra(graph, start_point)[end_point]
-    end
-  end
-  gains = distances.flatten.group_by(&:to_i).map { |key, values| [key, values.length / 2] }
-  total = gains.select { _1.first >= threshold }.sum { _2 }
-  puts "#{total} cheats save at least #{threshold} picoseconds"
+  [nodes, walls, start_point, end_point]
 end
 
-def deep_copy(object)
-  Marshal.load(Marshal.dump(object))
+def build_graph(nodes)
+  nodes.to_h do |node|
+    [node, DIRECTIONS.map { node + _1 }.select { nodes.member?(_1) }.to_h { [_1, 1] }]
+  end
 end
 
 def find_cheats(nodes, walls)
-  graph = {}
-  nodes.each do |node|
-    DIRECTIONS.each do |dir|
-      if walls.include?(node + dir) && nodes.include?(node + (2 * dir))
-        graph[node] ||= []
-        graph[node] << (node + (2 * dir))
-      end
-    end
-  end
-  graph
-end
-
-def build_graph(roads)
-  graph = {}
-  roads.each do |node|
-    graph[node] = {}
-    DIRECTIONS.each { graph[node][node + _1] = 1 if roads.member?(node + _1) }
-  end
-  graph
+  nodes.map do |node|
+    DIRECTIONS.select { walls.member?(node + _1) && nodes.member?(node + (2 * _1)) }
+              .map { [node, node + (2 * _1)] }
+  end.flatten(1)
 end
 
 def dijkstra(graph, start)
@@ -111,5 +99,5 @@ def dijkstra(graph, start)
   distances
 end
 
-main('Example', EXAMPLE, 0)
-main('Puzzle input', File.read('input.txt'), 100)
+main('Example', EXAMPLE, 2) # 44
+main('Puzzle input', File.read('input.txt'), 100) # 1524
