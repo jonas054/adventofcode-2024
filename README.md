@@ -24,7 +24,7 @@ Here's my attempt.
 - Day 17: ✅ ✅ Assembler
 - Day 18: ✅ ✅ Scala
 - Day 19: ✅ ✅ JavaScript
-- Day 20: ✅ Ruby
+- Day 20: ✅ ✅ Ruby
 - Day 21: Go?
 - Day 22: Perl
 - Day 23: Basic?
