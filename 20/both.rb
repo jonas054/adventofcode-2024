@@ -35,18 +35,14 @@ def main(heading, input, max_cheat_length, threshold)
   puts heading
   nodes, start_point, end_point = parse(input)
   graph = build_graph(nodes)
-  puts "  Nodes: #{graph.size}"
+  puts "    Nodes: #{graph.size}"
   forwards, backwards = Parallel.map([start_point, end_point]) { dijkstra(graph, _1) }
-  puts "  Original shortest distance: #{forwards[end_point]}"
+  puts "    Original shortest distance: #{forwards[end_point]}"
   total = find_cheats(nodes, max_cheat_length)
           .map { |from, to| shortest(forwards, backwards, from, to) + from.manhattan_distance(to) }
           .map { |distance| forwards[end_point] - distance }
-          .flatten
-          .group_by(&:to_i)
-          .select { |saving, _| saving >= threshold }
-          .map { |saving, instances| [saving, instances.length / 2] }
-          .sum { |_, count| count }
-  puts "  #{total} cheats save at least #{threshold} picoseconds"
+          .count { |saving, _| saving >= threshold }
+  puts "    #{total / 2} cheats save at least #{threshold} picoseconds"
 end
 
 def shortest(forwards, backwards, from, to)
@@ -94,7 +90,7 @@ def find_cheats(nodes, max_cheat_length)
       end
     end
   end
-  puts "  Found #{cheats.size} cheats"
+  puts "    Found #{cheats.size} cheats"
   cheats
 end
 
@@ -121,9 +117,9 @@ def dijkstra(graph, start)
   distances
 end
 
-puts '=== Part 1 ==='
-main('Example', EXAMPLE, 2, 2) # 44 cheats save at least 2 picoseconds
-main('Puzzle input', File.read('input.txt'), 2, 100) # 1524 cheats save at least 100 picoseconds
-puts '=== Part 2 ==='
-main('Example', EXAMPLE, 20, 74) # 7 cheats save at least 74 picoseconds
-main('Puzzle input', File.read('input.txt'), 20, 100) # 1033746 cheats save at least 100 picoseconds
+puts 'Part 1'
+main('  Example', EXAMPLE, 2, 2) # 44 cheats save at least 2 picoseconds
+main('  Puzzle input', File.read('input.txt'), 2, 100) # 1524 cheats save at least 100 picoseconds
+puts 'Part 2'
+main('  Example', EXAMPLE, 20, 74) # 7 cheats save at least 74 picoseconds
+main('  Puzzle input', File.read('input.txt'), 20, 100) # 1033746 cheats save at least 100 picoseconds
